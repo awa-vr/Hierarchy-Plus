@@ -1,0 +1,17 @@
+{
+  "name": "com.awavr.hierarchyplus",
+  "displayName": "AwA - HierarchyPlus",
+  "version": "1.3.0",
+  "description": "A general improvement to the unity hierarchy such as component icons, guide lines, row coloring and settings for customization.",
+  "gitDependencies": {},
+  "vpmDependencies": {},
+  "author": {
+    "name": "AwA",
+    "email": "N/A",
+    "url": "https://github.com/awa-vr/vrc-tools"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {},
+  "type": "tool",
+  "unity": "2022.3"
+}
