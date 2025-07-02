@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using static AwAVR.HierarchyPlus.SavedSettings;
 using static AwAVR.HierarchyPlus.StylesContainer;
+using AwAVR;
 
 namespace AwAVR.HierarchyPlus
 {
@@ -59,14 +60,22 @@ namespace AwAVR.HierarchyPlus
 
         #region Window
 
-        [MenuItem("Tools/AwA/HierarchyPlus", false, 366)]
+        [MenuItem("Tools/AwA/HierarchyPlus", false)]
         private static void OpenSettings()
         {
-            GetWindow<HierarchyPlus>($"{PRODUCT_NAME} Settings");
+            var windowTitle = $"{PRODUCT_NAME} Settings";
+            var window = GetWindow<HierarchyPlus>(windowTitle);
+            window.titleContent = new GUIContent(
+                image: EditorGUIUtility.IconContent("d_Settings@2x").image,
+                text: windowTitle,
+                tooltip: "Settings for Hierarchy Plus"
+            );
         }
 
-        private void OnGUI()
+        public void OnGUI()
         {
+            Core.Title(PRODUCT_NAME);
+
             EditorGUI.BeginChangeCheck();
             scroll = EditorGUILayout.BeginScrollView(scroll);
 
@@ -155,15 +164,18 @@ namespace AwAVR.HierarchyPlus
                     using (new GUILayout.VerticalScope())
                     {
                         EditorGUIUtility.labelWidth = 200;
-                        settings.enableContextClick.DrawField("Enable Context Click");
+                        settings.enableContextClick.DrawField("Enable Context Click",
+                            "Right click an icon to bring up the context menu for that component. This is the same menu that pops-up when you click the 3 dots in the inspector.\n\nThis is handy when having to copy components from one gameobject to another.");
                         settings.enableDragToggle.DrawField("Enable Drag-Toggle");
                         settings.showGameObjectIcon.DrawField("Show GameObject Icon");
                         using (new EditorGUI.DisabledScope(!settings.showGameObjectIcon))
                             settings.useCustomGameObjectIcon.DrawField("Use Custom GameObject Icon");
                         settings.showTransformIcon.DrawField("Show Transform Icon");
                         settings.showNonBehaviourIcons.DrawField("Show Non-Toggleable Icons");
-                        settings.alwaysShowIcons.DrawField("Always Render Icons");
-                        settings.linkCursorOnHover.DrawField("Link Cursor On Hover");
+                        settings.alwaysShowIcons.DrawField("Always Render Icons",
+                            "Always renders the icons.\n\nThis can break certain things. e.g. icons show over the gameobject name");
+                        settings.linkCursorOnHover.DrawField("Link Cursor On Hover",
+                            "Change the cursor from the normal pointy one to the finger one when hovering oven an icon.");
                         settings.guiXOffset.value =
                             EditorGUILayout.FloatField("Icons X Offset", settings.guiXOffset.value);
                         using (new GUILayout.VerticalScope())
@@ -258,18 +270,9 @@ namespace AwAVR.HierarchyPlus
             }
 
             EditorGUILayout.EndScrollView();
-            using (new GUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                w_Credit();
-            }
 
             if (EditorGUI.EndChangeCheck())
                 EditorApplication.RepaintHierarchyWindow();
-        }
-
-        private static void w_Credit()
-        {
         }
 
         internal static void w_UnderlineLastRectOnHover(Color? color = null)
@@ -294,7 +297,7 @@ namespace AwAVR.HierarchyPlus
 
         static HierarchyPlus()
         {
-            EditorApplication.delayCall += () => { InitializeAll(); };
+            EditorApplication.delayCall += () => { InitializeGUI(); };
         }
 
         private static void OnHierarchyItemGUI(int id, Rect rect)
@@ -411,14 +414,17 @@ namespace AwAVR.HierarchyPlus
                 }
             }
 
-            float nameAdjust = GUI.skin.label.CalcSize(new GUIContent(go.name)).x + 18;
-            Rect baseRect = new Rect(rect) { width = rect.width - 32 + settings.guiXOffset - nameAdjust };
-            baseRect.x += nameAdjust;
+            float nameAdjust = GUI.skin.label.CalcSize(new GUIContent(go.name)).x;
+            float labelStartX = rect.x + nameAdjust + 18; // 18 is icon offset
+            float labelWidthX = rect.xMax - labelStartX;
+
+            Rect baseRect = new Rect(labelStartX, rect.y, labelWidthX, rect.height);
+
+            int currentIconCount = 0;
 
             if (settings.GetIconsEnabled())
             {
                 Rect availableIconArea = new Rect(baseRect);
-                int currentIconCount = 0;
                 Rect iconRect = availableIconArea;
                 iconRect.x = availableIconArea.xMax - 18;
                 iconRect.width = 18;
@@ -491,28 +497,32 @@ namespace AwAVR.HierarchyPlus
             if (settings.GetLabelsEnabled())
             {
                 GUIStyle als = "assetlabel";
-                Rect availableLabelsArea = baseRect;
-                availableLabelsArea.width -= 18 * (lastMaxIconCount + 1);
+                float nameWidth = GUI.skin.label.CalcSize(new GUIContent(go.name)).x;
+                float labelX = rect.x + nameWidth + 18; // start just after name
+                float labelHeight = rect.height;
 
+                float spacing = 4f; // space between labels
+                float currentX = labelX;
+                float iconPadding = 18 * currentIconCount;
+
+                // Draw Layer Label
                 if (settings.layerLabelEnabled && (settings.displayDefaultLayerLabel || go.layer != 0))
                 {
-                    float maxWidth = availableLabelsArea.width;
-                    float layerLabelWidth = settings.layerLabelWidth;
-                    Rect layerRect = UseRectEnd(ref availableLabelsArea, layerLabelWidth);
-                    layerRect.width = Mathf.Clamp(layerRect.width, 0, Mathf.Max(0, maxWidth));
-                    layerRect.x += layerLabelWidth - layerRect.width;
-                    if (layerRect.width > 10)
+                    string layerName = LayerMask.LayerToName(go.layer);
+                    string layerText = settings.displayLayerIndex ? $"{go.layer}: {layerName}" : layerName;
+
+                    float availableWidth = rect.xMax - currentX - iconPadding;
+                    float layerWidth = Mathf.Min(settings.layerLabelWidth, availableWidth);
+                    if (layerWidth > 10)
                     {
-                        string layerName = LayerMask.LayerToName(go.layer);
-                        string label = settings.displayLayerIndex ? $"{go.layer}: {layerName}" : layerName;
+                        Rect layerRect = new Rect(currentX, rect.y, layerWidth, labelHeight);
                         using (new ColoredScope(ColoredScope.ColoringType.BG, new Color(0, 0, 0, 0.4f)))
                         using (new ColoredScope(ColoredScope.ColoringType.FG, new Color(0.7f, 0.7f, 0.7f)))
-                            GUI.Label(layerRect, label, als);
+                            GUI.Label(layerRect, layerText, als);
 
                         if (settings.enableLabelContextClick && RightClicked(layerRect))
                         {
                             var layerNames = Enumerable.Range(0, 31).Select(LayerMask.LayerToName).ToArray();
-
                             GenericMenu layerMenu = new GenericMenu();
                             for (int i = 0; i < layerNames.Length; i++)
                             {
@@ -531,29 +541,26 @@ namespace AwAVR.HierarchyPlus
 
                             layerMenu.ShowAsContext();
                         }
+
+                        currentX += layerWidth + spacing;
                     }
                 }
-                else UseRectEnd(ref availableLabelsArea, settings.layerLabelWidth);
 
+                // Draw Tag Label (if doesn't overlap icons)
                 if (settings.tagLabelEnabled && (settings.displayUntaggedLabel || !go.CompareTag("Untagged")))
                 {
-                    UseRectEnd(ref availableLabelsArea, 18);
-                    float maxWidth = availableLabelsArea.width;
-                    float labelWidth = settings.tagLabelWidth;
-                    Rect tagRect = UseRectEnd(ref availableLabelsArea, labelWidth);
-                    tagRect.width = Mathf.Clamp(tagRect.width, 0, Mathf.Max(0, maxWidth));
-                    if (tagRect.width > 10)
+                    string tagText = go.tag;
+                    float tagWidth = Mathf.Min(settings.tagLabelWidth, rect.xMax - currentX - iconPadding);
+                    if (tagWidth > 10)
                     {
-                        tagRect.x += labelWidth - tagRect.width;
-                        string tagName = go.tag;
+                        Rect tagRect = new Rect(currentX, rect.y, tagWidth, labelHeight);
                         using (new ColoredScope(ColoredScope.ColoringType.BG, new Color(0, 0, 0, 0.4f)))
                         using (new ColoredScope(ColoredScope.ColoringType.FG, new Color(0.7f, 0.7f, 0.7f)))
-                            GUI.Label(tagRect, tagName, "assetlabel");
+                            GUI.Label(tagRect, tagText, als);
 
                         if (settings.enableLabelContextClick && RightClicked(tagRect))
                         {
                             var tagNames = UnityEditorInternal.InternalEditorUtility.tags;
-
                             GenericMenu tagMenu = new GenericMenu();
                             foreach (var n in tagNames)
                             {
@@ -568,6 +575,8 @@ namespace AwAVR.HierarchyPlus
 
                             tagMenu.ShowAsContext();
                         }
+
+                        currentX += tagWidth + spacing;
                     }
                 }
             }
@@ -831,7 +840,6 @@ namespace AwAVR.HierarchyPlus
 
         #region Initialization
 
-        [InitializeOnLoadMethod]
         private static void InitializeGUI()
         {
             InitializeAll();
