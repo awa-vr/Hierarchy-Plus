@@ -7,6 +7,9 @@
   "vpmDependencies": {
     "com.awavr.core": ">=1.0.0"
   },
+  "legacyPackages": [
+    "com.dreadscripts.hierarchyplus"
+  ],
   "author": {
     "name": "AwA",
     "email": "N/A",
