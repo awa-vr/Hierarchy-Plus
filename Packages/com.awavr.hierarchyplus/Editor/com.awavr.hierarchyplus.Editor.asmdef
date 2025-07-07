@@ -2,7 +2,7 @@
     "name": "com.awavr.hierarchyplus.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:1e92c732e52f9344a9bbc0feeda3af6e"
+        "com.awavr.core.Editor"
     ],
     "includePlatforms": [
         "Editor"
