@@ -1,3 +1,10 @@
+(v1.3.5)
+--------
+- [ADD]: Icon for VRCHeadChop
+- [ADD]: Icon for VRCRaycast
+- [ADD]: Icon for VRCStation
+- [ADD]: Icon for VRCSpatialAudioSource
+
 (v1.3.2)
 --------
 - [FIX]: Layer and Tag labels not showing when there's a gameobject with a lot of icons, and having a normal sized Hierarchy panel.
